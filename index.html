@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>冰河城主：生存战略</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Microsoft YaHei', sans-serif; 
+            background: linear-gradient(to bottom, #1e3c72, #2a5298); 
+            color: #e0e0e0; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            min-height: 100vh; 
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        #game-container { 
+            width: 100%; 
+            max-width: 500px; 
+            background: rgba(0, 20, 40, 0.85); 
+            border-radius: 15px; 
+            padding: 20px; 
+            box-shadow: 0 0 25px rgba(0, 150, 255, 0.4); 
+            border: 1px solid rgba(100, 180, 255, 0.3); 
+        }
+        h1 { 
+            color: #4fc3f7; 
+            text-align: center; 
+            margin-bottom: 20px; 
+            text-shadow: 0 0 8px rgba(79, 195, 247, 0.7); 
+            font-size: 1.8em;
+        }
+        .status-bar { 
+            display: flex; 
+            justify-content: space-between; 
+            margin-bottom: 15px; 
+            font-size: 0.9em;
+        }
+        #resource-display, #people-mood { 
+            background: rgba(0, 40, 80, 0.7); 
+            padding: 10px 15px; 
+            border-radius: 10px; 
+            border: 1px solid rgba(100, 180, 255, 0.2); 
+        }
+        #city-canvas { 
+            background: linear-gradient(to bottom, #0f2027, #203a43, #2c5364); 
+            display: block; 
+            margin: 0 auto 15px; 
+            border-radius: 8px; 
+            border: 2px solid rgba(100, 180, 255, 0.4); 
+        }
+        #event-display { 
+            background: rgba(30, 60, 90, 0.8); 
+            padding: 15px; 
+            border-radius: 10px; 
+            margin-bottom: 15px; 
+            border-left: 4px solid #4fc3f7; 
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+        }
+        #action-buttons { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 10px; 
+        }
+        button { 
+            padding: 12px; 
+            border: none; 
+            border-radius: 8px; 
+            background: linear-gradient(to bottom, #2196F3, #0D47A1); 
+            color: white; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+        button:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); 
+            background: linear-gradient(to bottom, #42A5F5, #1565C0); 
+        }
+        #game-message { 
+            margin-top: 15px; 
+            padding: 10px; 
+            text-align: center; 
+            border-radius: 8px; 
+            background: rgba(255, 255, 255, 0.1); 
+            min-height: 20px;
+        }
+        .screen { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            background: rgba(0, 20, 40, 0.95); 
+            z-index: 10; 
+        }
+        #start-screen button, #game-over-screen button { 
+            margin-top: 20px; 
+            padding: 12px 30px; 
+            font-size: 1.1em; 
+        }
+        #upgrade-screen { 
+            display: none; 
+        }
+        .upgrade-option { 
+            background: rgba(30, 60, 90, 0.8); 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 10px; 
+            cursor: pointer; 
+            width: 80%; 
+            text-align: center; 
+            border: 2px solid transparent; 
+            transition: all 0.3s ease;
+        }
+        .upgrade-option:hover { 
+            border-color: #4fc3f7; 
+            transform: translateY(-3px); 
+        }
+        #general-display { 
+            display: flex; 
+            justify-content: space-around; 
+            margin-top: 15px; 
+        }
+        .general-card { 
+            background: rgba(40, 70, 100, 0.7); 
+            padding: 10px; 
+            border-radius: 8px; 
+            text-align: center; 
+            width: 30%; 
+            border: 1px solid rgba(100, 180, 255, 0.3); 
+        }
+        .highlight { 
+            color: #4fc3f7; 
+            font-weight: bold; 
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <h1>冰河城主：生存战略</h1>
+        <div class="status-bar">
+            <div id="resource-display">粮食: <span id="food-value">100</span> | 木材: <span id="wood-value">50</span></div>
+            <div id="people-mood">民心: <span id="mood-value">70</span></div>
+        </div>
+        <canvas id="city-canvas" width="460" height="200"></canvas>
+        
+        <div id="general-display">
+            <div class="general-card" id="general-1">武将: 无</div>
+            <div class="general-card" id="general-2">武将: 无</div>
+            <div class="general-card" id="general-3">武将: 无</div>
+        </div>
+        
+        <div id="event-display">欢迎，城主大人！冰雪覆盖的世界等待着您的统治。您的每个决定都至关重要。</div>
+        
+        <div id="action-buttons">
+            <button id="btn-choice-1">选择 1</button>
+            <button id="btn-choice-2">选择 2</button>
+        </div>
+        
+        <div id="game-message"></div>
+    </div>
+
+    <div id="start-screen" class="screen">
+        <h1>冰河城主：生存战略</h1>
+        <p>在冰雪世界中建立你的城市，做出明智决策，赢得民心！</p>
+        <button id="start-button">开始游戏</button>
+    </div>
+
+    <div id="upgrade-screen" class="screen">
+        <h2>选择你的发展方向</h2>
+        <div class="upgrade-option" data-upgrade="food">农业专家 - 粮食产量提升20%</div>
+        <div class="upgrade-option" data-upgrade="wood">林业专家 - 木材产量提升20%</div>
+        <div class="upgrade-option" data-upgrade="mood">亲民政策 - 民心提升速度加快</div>
+    </div>
+
+    <div id="game-over-screen" class="screen" style="display: none;">
+        <h2 id="game-over-title">游戏结束</h2>
+        <p id="game-over-message"></p>
+        <button id="restart-button">再来一局</button>
+    </div>
+
+    <script>
+        // 游戏状态与配置
+        const gameState = {
+            food: 100,
+            wood: 50,
+            mood: 70,
+            season: 1,
+            gameActive: true,
+            upgrades: {
+                food: false,
+                wood: false,
+                mood: false
+            },
+            generals: []
+        };
+
+        // DOM 元素
+        const elements = {
+            foodValue: document.getElementById('food-value'),
+            woodValue: document.getElementById('wood-value'),
+            moodValue: document.getElementById('mood-value'),
+            eventDisplay: document.getElementById('event-display'),
+            btnChoice1: document.getElementById('btn-choice-1'),
+            btnChoice2: document.getElementById('btn-choice-2'),
+            gameMessage: document.getElementById('game-message'),
+            startScreen: document.getElementById('start-screen'),
+            upgradeScreen: document.getElementById('upgrade-screen'),
+            gameOverScreen: document.getElementById('game-over-screen'),
+            generalDisplays: [
+                document.getElementById('general-1'),
+                document.getElementById('general-2'),
+                document.getElementById('general-3')
+            ]
+        };
+
+        // 游戏事件库
+        const gameEvents = [
+            {
+                description: "一场暴风雪摧毁了部分农田，灾民需要援助。",
+                choice1: { text: "开仓放粮，救助灾民", effect: { food: -20, mood: 10 } },
+                choice2: { text: "优先修复防御工事", effect: { wood: -15, mood: -5 } }
+            },
+            {
+                description: "邻国商人带来了一批稀有木材，但价格不菲。",
+                choice1: { text: "用粮食交换木材", effect: { food: -25, wood: 30 } },
+                choice2: { text: "婉拒交易，自给自足", effect: { mood: 5 } }
+            },
+            {
+                description: "在酒馆中，你遇到了一位自称赵云的人，想为你效力。",
+                choice1: { text: "热情招募", effect: { general: "赵云", mood: 5 } },
+                choice2: { text: "考验其能力", effect: { mood: -3 } }
+            },
+            {
+                description: "发现一片未开发的森林，但可能有野兽出没。",
+                choice1: { text: "组织队伍前去伐木", effect: { wood: 25, mood: -5 } },
+                choice2: { text: "放弃机会，确保安全", effect: { mood: 5 } }
+            },
+            {
+                description: "民间流传着你苛待士兵的谣言。",
+                choice1: { text: "公开澄清并改善待遇", effect: { food: -10, mood: 10 } },
+                choice2: { text: "逮捕散播谣言者", effect: { mood: -15 } }
+            }
+        ];
+
+        // 可用武将池
+        const generalPool = ["赵云", "诸葛亮", "吕布", "关羽", "周瑜"];
+
+        // 初始化游戏
+        function initGame() {
+            gameState.food = 100;
+            gameState.wood = 50;
+            gameState.mood = 70;
+            gameState.season = 1;
+            gameState.gameActive = true;
+            gameState.upgrades = { food: false, wood: false, mood: false };
+            gameState.generals = [];
+            
+            updateResourceDisplay();
+            elements.startScreen.style.display = 'none';
+            elements.upgradeScreen.style.display = 'none';
+            elements.gameOverScreen.style.display = 'none';
+            
+            // 初始武将
+            recruitRandomGeneral();
+            triggerRandomEvent();
+        }
+
+        // 更新资源显示
+        function updateResourceDisplay() {
+            elements.foodValue.textContent = gameState.food;
+            elements.woodValue.textContent = gameState.wood;
+            elements.moodValue.textContent = gameState.mood;
+            
+            // 更新武将显示
+            for (let i = 0; i < elements.generalDisplays.length; i++) {
+                if (gameState.generals[i]) {
+                    elements.generalDisplays[i].textContent = `武将: ${gameState.generals[i]}`;
+                    elements.generalDisplays[i].classList.add('highlight');
+                } else {
+                    elements.generalDisplays[i].textContent = "武将: 无";
+                    elements.generalDisplays[i].classList.remove('highlight');
+                }
+            }
+        }
+
+        // 触发随机事件
+        function triggerRandomEvent() {
+            if (!gameState.gameActive) return;
+            
+            const event = gameEvents[Math.floor(Math.random() * gameEvents.length)];
+            elements.eventDisplay.textContent = event.description;
+            elements.btnChoice1.textContent = event.choice1.text;
+            elements.btnChoice2.textContent = event.choice2.text;
+            
+            // 设置按钮事件处理
+            elements.btnChoice1.onclick = () => handleChoice(event.choice1.effect);
+            elements.btnChoice2.onclick = () => handleChoice(event.choice2.effect);
+        }
+
+        // 处理玩家选择
+        function handleChoice(effect) {
+            // 应用选择效果
+            Object.keys(effect).forEach(key => {
+                if (key === 'general') {
+                    if (gameState.generals.length < 3) {
+                        gameState.generals.push(effect[key]);
+                        showMessage(`欢迎 ${effect[key]} 加入你的阵营！`);
+                    } else {
+                        showMessage("你的武将名额已满，无法招募更多武将。");
+                    }
+                } else {
+                    gameState[key] += effect[key];
+                }
+            });
+            
+            // 检查游戏状态
+            checkGameState();
+            if (gameState.gameActive) {
+                // 每3个季节触发一次升级机会
+                if (gameState.season % 3 === 0) {
+                    showUpgradeScreen();
+                } else {
+                    triggerRandomEvent();
+                }
+                gameState.season++;
+            }
+            
+            updateResourceDisplay();
+        }
+
+        // 检查游戏状态
+        function checkGameState() {
+            // 检查资源是否枯竭
+            if (gameState.food <= 0 || gameState.wood <= 0) {
+                endGame("资源耗尽", "你的城市因资源枯竭而无法维持，民众纷纷离开。");
+                return;
+            }
+            
+            // 检查民心是否过低
+            if (gameState.mood <= 0) {
+                endGame("民心尽失", "民众对你的统治极度不满，发生了暴乱。");
+                return;
+            }
+            
+            // 检查是否获胜（示例条件）
+            if (gameState.season >= 10 && gameState.mood >= 80 && gameState.generals.length >= 2) {
+                endGame("繁荣盛世", "恭喜！你成功建立了繁荣昌盛的城市，成为一代明君！");
+                return;
+            }
+            
+            // 随机招募武将
+            if (Math.random() < 0.2 && gameState.generals.length < 3) {
+                recruitRandomGeneral();
+            }
+        }
+
+        // 招募随机武将
+        function recruitRandomGeneral() {
+            const availableGenerals = generalPool.filter(g => !gameState.generals.includes(g));
+            if (availableGenerals.length > 0) {
+                const newGeneral = availableGenerals[Math.floor(Math.random() * availableGenerals.length)];
+                gameState.generals.push(newGeneral);
+                showMessage(`${newGeneral} 听闻你的贤明，前来投奔！`);
+                updateResourceDisplay();
+            }
+        }
+
+        // 显示升级选择屏幕
+        function showUpgradeScreen() {
+            elements.upgradeScreen.style.display = 'flex';
+            
+            // 设置升级选项事件
+            document.querySelectorAll('.upgrade-option').forEach(option => {
+                option.onclick = function() {
+                    const upgradeType = this.getAttribute('data-upgrade');
+                    gameState.upgrades[upgradeType] = true;
+                    
+                    switch(upgradeType) {
+                        case 'food':
+                            showMessage("农业专家改进了种植技术，粮食产量提升了！");
+                            break;
+                        case 'wood':
+                            showMessage("林业专家优化了伐木方式，木材产量提升了！");
+                            break;
+                        case 'mood':
+                            showMessage("亲民政策让民众更加爱戴你，民心提升更快了！");
+                            break;
+                    }
+                    
+                    elements.upgradeScreen.style.display = 'none';
+                    triggerRandomEvent();
+                };
+            });
+        }
+
+        // 结束游戏
+        function endGame(title, message) {
+            gameState.gameActive = false;
+            elements.gameOverScreen.style.display = 'flex';
+            document.getElementById('game-over-title').textContent = title;
+            document.getElementById('game-over-message').textContent = message;
+        }
+
+        // 显示消息
+        function showMessage(message) {
+            elements.gameMessage.textContent = message;
+            setTimeout(() => {
+                elements.gameMessage.textContent = '';
+            }, 3000);
+        }
+
+        // 绘制简易城市画面
+        function drawCity() {
+            const canvas = document.getElementById('city-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // 清空画布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制天空
+            ctx.fillStyle = '#0f2027';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制雪花
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            for (let i = 0; i < 50; i++) {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height;
+                ctx.beginPath();
+                ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // 绘制地面
+            ctx.fillStyle = '#1a3a4a';
+            ctx.fillRect(0, canvas.height - 60, canvas.width, 60);
+            
+            // 根据资源水平绘制建筑
+            const buildingCount = Math.min(5, Math.floor(gameState.food / 30) + Math.floor(gameState.wood / 20));
+            
+            for (let i = 0; i < buildingCount; i++) {
+                const x = 50 + i * 80;
+                const height = 30 + (gameState.mood / 100) * 40;
+                
+                // 建筑主体
+                ctx.fillStyle = i % 2 === 0 ? '#3a6186' : '#2a4d69';
+                ctx.fillRect(x, canvas.height - 60 - height, 40, height);
+                
+                // 窗户
+                ctx.fillStyle = '#ffeb3b';
+                ctx.fillRect(x + 8, canvas.height - 60 - height + 10, 8, 8);
+                ctx.fillRect(x + 24, canvas.height - 60 - height + 10, 8, 8);
+                
+                // 门
+                ctx.fillStyle = '#8d6e63';
+                ctx.fillRect(x + 15, canvas.height - 60 - 15, 10, 15);
+            }
+            
+            // 根据民心绘制民众
+            const peopleCount = Math.min(10, Math.floor(gameState.mood / 10));
+            
+            for (let i = 0; i < peopleCount; i++) {
+                const x = 20 + i * 40;
+                ctx.fillStyle = '#e0e0e0';
+                ctx.beginPath();
+                ctx.arc(x, canvas.height - 40, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // 游戏循环 - 定期绘制
+        function gameLoop() {
+            if (gameState.gameActive) {
+                drawCity();
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 事件监听
+        document.getElementById('start-button').addEventListener('click', initGame);
+        document.getElementById('restart-button').addEventListener('click', initGame);
+
+        // 初始绘制
+        drawCity();
+        // 启动游戏循环
+        gameLoop();
+    </script>
+</body>
+</html>
